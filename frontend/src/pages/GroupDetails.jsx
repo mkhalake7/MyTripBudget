@@ -13,20 +13,55 @@ const GroupDetails = () => {
     const [desc, setDesc] = useState('');
     const [amount, setAmount] = useState('');
     const [payerId, setPayerId] = useState('');
+    const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+    const [splitType, setSplitType] = useState('EQUAL');
+    const [customSplits, setCustomSplits] = useState([]);
 
     const handleAddExpense = async (e) => {
         e.preventDefault();
+
+        // Validation for custom splits
+        if (splitType === 'EXACT') {
+            const total = customSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+            if (Math.abs(total - parseFloat(amount)) > 0.01) {
+                setMessage(`Split amounts must sum to ${amount}. Current total: ${total.toFixed(2)}`);
+                setTimeout(() => setMessage(''), 3000);
+                return;
+            }
+        } else if (splitType === 'PERCENTAGE') {
+            const total = customSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+            if (Math.abs(total - 100) > 0.01) {
+                setMessage(`Percentages must sum to 100. Current total: ${total.toFixed(2)}%`);
+                setTimeout(() => setMessage(''), 3000);
+                return;
+            }
+        }
+
         try {
-            await api.post('/expenses/', {
+            const payload = {
                 description: desc,
                 amount: parseFloat(amount),
                 group_id: parseInt(groupId),
                 payer_id: parseInt(payerId),
-                split_type: 'EQUAL' // Defaulting to EQUAL for now
-            });
+                split_type: splitType,
+                date: expenseDate
+            };
+
+            // Add splits for EXACT and PERCENTAGE
+            if (splitType !== 'EQUAL' && customSplits.length > 0) {
+                payload.splits = customSplits.map(split => ({
+                    user_id: parseInt(split.user_id),
+                    amount: parseFloat(split.amount)
+                }));
+            }
+
+            await api.post('/expenses/', payload);
             setDesc('');
             setAmount('');
             setPayerId('');
+            setExpenseDate(new Date().toISOString().split('T')[0]);
+            setSplitType('EQUAL');
+            setCustomSplits([]);
             fetchBalances(); // Refresh balances
             fetchExpenses(); // Refresh expenses list
             setMessage('Expense added successfully!');
@@ -194,8 +229,15 @@ const GroupDetails = () => {
                             type="number"
                             placeholder="Amount"
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            onChange={(e) => {
+                                setAmount(e.target.value);
+                                // Reset custom splits when amount changes
+                                if (splitType !== 'EQUAL') {
+                                    setCustomSplits(members.map(m => ({ user_id: m.id, amount: '' })));
+                                }
+                            }}
                             required
+                            step="0.01"
                             style={{ marginBottom: '10px', width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
                         />
                         <select
@@ -211,6 +253,67 @@ const GroupDetails = () => {
                                 </option>
                             ))}
                         </select>
+                        <input
+                            type="date"
+                            value={expenseDate}
+                            onChange={(e) => setExpenseDate(e.target.value)}
+                            required
+                            style={{ marginBottom: '10px', width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                        />
+                        <select
+                            value={splitType}
+                            onChange={(e) => {
+                                const newType = e.target.value;
+                                setSplitType(newType);
+                                if (newType !== 'EQUAL') {
+                                    setCustomSplits(members.map(m => ({ user_id: m.id, amount: '' })));
+                                } else {
+                                    setCustomSplits([]);
+                                }
+                            }}
+                            style={{ marginBottom: '10px', width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                        >
+                            <option value="EQUAL">Equal Split</option>
+                            <option value="EXACT">Exact Amounts</option>
+                            <option value="PERCENTAGE">Percentage</option>
+                        </select>
+
+                        {splitType !== 'EQUAL' && (
+                            <div style={{ marginBottom: '10px', maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px', padding: '10px' }}>
+                                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem' }}>
+                                    {splitType === 'EXACT' ? 'Enter amount for each member:' : 'Enter percentage for each member:'}
+                                </h4>
+                                {members.map((member, idx) => (
+                                    <div key={member.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', gap: '8px' }}>
+                                        <label style={{ flex: 1, fontSize: '0.85rem' }}>{member.full_name || member.email}:</label>
+                                        <input
+                                            type="number"
+                                            placeholder={splitType === 'EXACT' ? '0.00' : '0'}
+                                            value={customSplits[idx]?.amount || ''}
+                                            onChange={(e) => {
+                                                const newSplits = [...customSplits];
+                                                newSplits[idx] = { user_id: member.id, amount: e.target.value };
+                                                setCustomSplits(newSplits);
+                                            }}
+                                            step={splitType === 'EXACT' ? '0.01' : '1'}
+                                            style={{ width: '100px', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                        />
+                                        {splitType === 'PERCENTAGE' && <span style={{ fontSize: '0.85rem' }}>%</span>}
+                                    </div>
+                                ))}
+                                {splitType === 'EXACT' && (
+                                    <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '8px' }}>
+                                        Total: ${customSplits.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toFixed(2)} / ${amount || '0.00'}
+                                    </div>
+                                )}
+                                {splitType === 'PERCENTAGE' && (
+                                    <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '8px' }}>
+                                        Total: {customSplits.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toFixed(2)}% / 100%
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Add Expense</button>
                     </form>
                 </div>
