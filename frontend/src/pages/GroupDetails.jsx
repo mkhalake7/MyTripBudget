@@ -86,6 +86,7 @@ const GroupDetails = () => {
     const fetchExpenses = async () => {
         try {
             const response = await api.get(`/expenses/group/${groupId}`);
+            console.log("Fetched expenses for group:", groupId, response.data);
             setExpenses(response.data);
         } catch (error) {
             console.error("Error fetching expenses", error);
@@ -320,27 +321,86 @@ const GroupDetails = () => {
             </div>
 
             <div className="expenses-list-section" style={{ marginTop: '2rem' }}>
-                <div className="group-card" style={{ cursor: 'default', padding: '20px' }}>
-                    <div className="group-card-header" style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px' }}>
-                        <h3>Expenses List</h3>
+                <div className="group-card" style={{ cursor: 'default', padding: '20px', marginTop: '20px' }}>
+                    <div className="group-card-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '15px' }}>
+                        <h3 style={{ color: 'white' }}>Expenses</h3>
                     </div>
                     {expenses.length === 0 ? (
-                        <p style={{ color: '#666', fontStyle: 'italic' }}>No expenses recorded yet.</p>
+                        <div className="empty-state" style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>
+                            <p>No expenses yet. Add your first expense above!</p>
+                        </div>
                     ) : (
-                        <ul style={{ listStyle: 'none', padding: 0, marginTop: '10px' }}>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                             {expenses.map(expense => {
-                                const payer = members.find(m => m.id === expense.payer_id);
+                                const expenseDate = new Date(expense.created_at);
+                                const formattedDate = expenseDate.toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                });
+
                                 return (
-                                    <li key={expense.id} style={{ padding: '12px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold', color: '#333' }}>{expense.description}</div>
-                                            <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                                                Paid by {payer ? (payer.full_name || payer.email) : 'Unknown'} • {new Date(expense.date).toLocaleDateString()}
+                                    <li key={expense.id} style={{
+                                        marginBottom: '12px',
+                                        padding: '16px',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        transition: 'all 0.2s ease',
+                                        cursor: 'default'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{
+                                                    fontSize: '1.05rem',
+                                                    fontWeight: '600',
+                                                    color: 'white',
+                                                    marginBottom: '4px'
+                                                }}>
+                                                    {expense.description}
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '0.85rem',
+                                                    color: '#9ca3af',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px'
+                                                }}>
+                                                    <span>Paid by <span style={{ color: '#d1d5db', fontWeight: '500' }}>{expense.payer_name}</span></span>
+                                                    <span style={{ color: '#4b5563' }}>•</span>
+                                                    <span>{formattedDate}</span>
+                                                </div>
+                                            </div>
+                                            <div style={{
+                                                fontSize: '1.1rem',
+                                                fontWeight: 'bold',
+                                                color: '#10b981',
+                                                marginLeft: '16px'
+                                            }}>
+                                                ${expense.amount.toFixed(2)}
                                             </div>
                                         </div>
-                                        <div style={{ fontWeight: 'bold', color: '#333' }}>
-                                            ${expense.amount.toFixed(2)}
-                                        </div>
+                                        {expense.split_type && (
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                color: '#6b7280',
+                                                marginTop: '8px',
+                                                paddingTop: '8px',
+                                                borderTop: '1px solid rgba(255, 255, 255, 0.05)'
+                                            }}>
+                                                <span style={{
+                                                    background: 'rgba(139, 92, 246, 0.2)',
+                                                    color: '#a78bfa',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: '500',
+                                                    textTransform: 'uppercase'
+                                                }}>
+                                                    {expense.split_type}
+                                                </span>
+                                            </div>
+                                        )}
                                     </li>
                                 );
                             })}
