@@ -5,7 +5,7 @@ import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from . import models, schemas, database
+import models, schemas, database
 
 # SECRET_KEY should be in env variables in production
 SECRET_KEY = "supersecretkey" 

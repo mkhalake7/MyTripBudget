@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from .database import engine
-from . import models
-from .routers import auth, groups, expenses
+from database import engine
+import models
+from routers import auth, groups, expenses
 
 models.Base.metadata.create_all(bind=engine)
 

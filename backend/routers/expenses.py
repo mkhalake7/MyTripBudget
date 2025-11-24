@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from collections import defaultdict
-from .. import models, schemas, auth, database
+from datetime import datetime
+import models, schemas, auth, database
 
 router = APIRouter(
     prefix="/expenses",
@@ -11,6 +12,13 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.Expense)
 def create_expense(expense: schemas.ExpenseCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
+    print(f"\n=== CREATE EXPENSE CALLED ===")
+    print(f"User: {current_user.email}")
+    print(f"Group ID: {expense.group_id}")
+    print(f"Amount: {expense.amount}")
+    print(f"Split Type: {expense.split_type}")
+    print(f"Splits provided: {len(expense.splits) if expense.splits else 0}")
+    
     # Check if group exists
     group = db.query(models.Group).filter(models.Group.id == expense.group_id).first()
     if not group:
@@ -30,17 +38,36 @@ def create_expense(expense: schemas.ExpenseCreate, current_user: models.User = D
             raise HTTPException(status_code=400, detail=f"Payer {expense.payer_id} is not a member of this group")
         payer_id = expense.payer_id
 
+    # Parse date if provided as string
+    expense_date = None
+    if expense.date:
+        try:
+            # Try parsing ISO format (YYYY-MM-DD)
+            expense_date = datetime.fromisoformat(expense.date)
+        except (ValueError, AttributeError):
+            # If it's already a datetime object or invalid, use None
+            expense_date = None
+
     # Create expense
     db_expense = models.Expense(
         description=expense.description,
         amount=expense.amount,
         payer_id=payer_id,
         group_id=expense.group_id,
-        split_type=expense.split_type or "EQUAL"
+        split_type=expense.split_type or "EQUAL",
+        date=expense_date
     )
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
+    
+    # SAFEGUARD: Check if splits already exist for this expense (in case of duplicate API calls)
+    existing_splits = db.query(models.ExpenseSplit).filter(models.ExpenseSplit.expense_id == db_expense.id).all()
+    if existing_splits:
+        print(f"WARNING: Found {len(existing_splits)} existing splits for expense {db_expense.id}. Deleting them to prevent duplicates.")
+        for split in existing_splits:
+            db.delete(split)
+        db.commit()
     
     # Handle splits based on split_type
     members = db.query(models.GroupMember).filter(models.GroupMember.group_id == expense.group_id).all()
@@ -109,6 +136,16 @@ def create_expense(expense: schemas.ExpenseCreate, current_user: models.User = D
             db.add(db_split)
     
     db.commit()
+    
+    # Log how many splits were created
+    final_splits = db.query(models.ExpenseSplit).filter(models.ExpenseSplit.expense_id == db_expense.id).all()
+    print(f"=== EXPENSE CREATED ===")
+    print(f"Expense ID: {db_expense.id}")
+    print(f"Total splits created: {len(final_splits)}")
+    for split in final_splits:
+        print(f"  User {split.user_id}: ${split.amount:.2f}")
+    print(f"======================\n")
+    
     return db_expense
 
 @router.get("/group/{group_id}", response_model=List[schemas.Expense])

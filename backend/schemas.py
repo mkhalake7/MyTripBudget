@@ -13,7 +13,7 @@ class User(UserBase):
     id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
@@ -34,7 +34,7 @@ class Group(GroupBase):
     created_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ExpenseBase(BaseModel):
     description: str
@@ -49,6 +49,7 @@ class ExpenseCreate(ExpenseBase):
     payer_id: Optional[int] = None
     split_type: Optional[str] = "EQUAL"  # EQUAL, EXACT, PERCENTAGE
     splits: Optional[List[SplitDetail]] = None  # Only for EXACT/PERCENTAGE
+    date: Optional[str] = None  # User-specified expense date
 
 class Expense(ExpenseBase):
     id: int
@@ -56,9 +57,10 @@ class Expense(ExpenseBase):
     payer_name: Optional[str] = None
     split_type: str
     created_at: datetime
+    date: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ExpenseSplitResponse(BaseModel):
     user_id: int
@@ -67,7 +69,7 @@ class ExpenseSplitResponse(BaseModel):
     amount: float
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Debt(BaseModel):
     debtor_id: int

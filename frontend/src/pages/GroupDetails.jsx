@@ -16,9 +16,16 @@ const GroupDetails = () => {
     const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
     const [splitType, setSplitType] = useState('EQUAL');
     const [customSplits, setCustomSplits] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleAddExpense = async (e) => {
         e.preventDefault();
+
+        // Prevent duplicate submissions
+        if (isSubmitting) {
+            console.log("Already submitting, ignoring duplicate request");
+            return;
+        }
 
         // Validation for custom splits
         if (splitType === 'EXACT') {
@@ -36,6 +43,9 @@ const GroupDetails = () => {
                 return;
             }
         }
+
+        setIsSubmitting(true);
+        console.log("Submitting expense...");
 
         try {
             const payload = {
@@ -55,7 +65,10 @@ const GroupDetails = () => {
                 }));
             }
 
+            console.log("Posting expense with payload:", payload);
             await api.post('/expenses/', payload);
+            console.log("Expense posted successfully");
+
             setDesc('');
             setAmount('');
             setPayerId('');
@@ -68,7 +81,11 @@ const GroupDetails = () => {
             setTimeout(() => setMessage(''), 3000);
         } catch (error) {
             console.error("Error adding expense", error);
-            setMessage('Failed to add expense.');
+            console.error("Error response:", error.response?.data);
+            console.error("Error status:", error.response?.status);
+            setMessage(error.response?.data?.detail || 'Failed to add expense.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -315,7 +332,14 @@ const GroupDetails = () => {
                             </div>
                         )}
 
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Add Expense</button>
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                            style={{ width: '100%' }}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? 'Adding...' : 'Add Expense'}
+                        </button>
                     </form>
                 </div>
             </div>

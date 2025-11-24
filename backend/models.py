@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .database import Base
+from database import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -46,6 +46,7 @@ class Expense(Base):
     payer_id = Column(Integer, ForeignKey("users.id"))
     group_id = Column(Integer, ForeignKey("groups.id"))
     split_type = Column(String, default="EQUAL")  # EQUAL, EXACT, PERCENTAGE
+    date = Column(DateTime(timezone=True), nullable=True)  # User-specified expense date
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     payer = relationship("User", back_populates="expenses_paid")
