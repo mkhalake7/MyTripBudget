@@ -17,6 +17,13 @@ const Dashboard = () => {
             setGroups(response.data);
         } catch (error) {
             console.error("Error fetching groups", error);
+            const status = error.response?.status;
+            const detail = error.response?.data?.detail || error.message;
+            if (status === 401 || status === 403) {
+                setMessage('Not authenticated - please log in.');
+            } else {
+                setMessage(`Failed to load groups: ${detail}`);
+            }
         }
     };
 

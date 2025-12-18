@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
 const Register = () => {
@@ -8,20 +8,17 @@ const Register = () => {
     const [fullName, setFullName] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const { register } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         try {
-            await api.post('/signup', {
-                email,
-                full_name: fullName,
-                password
-            });
-            navigate('/login');
+            await register(email, password, fullName);
+            navigate('/dashboard');
         } catch (err) {
-            setError(err.response?.data?.detail || 'Failed to register');
+            setError(err.response?.data?.detail || 'Failed to register. Email may already be in use.');
         }
     };
 
