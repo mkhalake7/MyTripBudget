@@ -37,11 +37,12 @@ export const AuthProvider = ({ children }) => {
         setUser({ ...userResponse.data, token: access_token });
     };
 
-    const register = async (email, password, fullName) => {
+    const register = async (email, password, fullName, mobileNumber) => {
         await api.post('/signup', {
             email,
             password,
             full_name: fullName,
+            mobile_number: mobileNumber || null,
         });
         await login(email, password);
     };

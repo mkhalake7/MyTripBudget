@@ -9,7 +9,12 @@ const Dashboard = () => {
     const [groups, setGroups] = useState([]);
     const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDescription, setNewGroupDescription] = useState('');
+    const [newGroupCategory, setNewGroupCategory] = useState('Trip');
+    const [newGroupCurrency, setNewGroupCurrency] = useState('INR');
     const [message, setMessage] = useState('');
+
+    const categories = ['Trip', 'Home', 'Office', 'Friends', 'Other'];
+    const currencies = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'AED'];
 
     const fetchGroups = async () => {
         try {
@@ -37,10 +42,14 @@ const Dashboard = () => {
         try {
             await api.post('/groups/', {
                 name: newGroupName,
-                description: newGroupDescription
+                description: newGroupDescription,
+                category: newGroupCategory,
+                currency: newGroupCurrency
             });
             setNewGroupName('');
             setNewGroupDescription('');
+            setNewGroupCategory('Trip');
+            setNewGroupCurrency('INR');
             fetchGroups();
             setMessage('Group created successfully!');
             setTimeout(() => setMessage(''), 3000);
@@ -73,6 +82,26 @@ const Dashboard = () => {
 
             <div className="create-group-section">
                 <form onSubmit={createGroup} className="create-group-form">
+                    <div className="form-row">
+                        <select
+                            value={newGroupCategory}
+                            onChange={(e) => setNewGroupCategory(e.target.value)}
+                            className="category-select"
+                        >
+                            {categories.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={newGroupCurrency}
+                            onChange={(e) => setNewGroupCurrency(e.target.value)}
+                            className="currency-select"
+                        >
+                            {currencies.map(curr => (
+                                <option key={curr} value={curr}>{curr}</option>
+                            ))}
+                        </select>
+                    </div>
                     <input
                         type="text"
                         placeholder="Enter new group name..."
@@ -109,6 +138,10 @@ const Dashboard = () => {
                                 >
                                     <FiTrash2 />
                                 </button>
+                            </div>
+                            <div className="group-badges">
+                                <span className="badge category-badge">{group.category || 'Trip'}</span>
+                                <span className="badge currency-badge">{group.currency || 'INR'}</span>
                             </div>
                             <p>{group.description || 'No description'}</p>
                             <div className="group-meta">

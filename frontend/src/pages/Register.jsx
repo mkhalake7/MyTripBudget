@@ -6,6 +6,7 @@ import './Auth.css';
 const Register = () => {
     const [email, setEmail] = useState('');
     const [fullName, setFullName] = useState('');
+    const [mobileNumber, setMobileNumber] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const { register } = useAuth();
@@ -15,7 +16,7 @@ const Register = () => {
         e.preventDefault();
         setError('');
         try {
-            await register(email, password, fullName);
+            await register(email, password, fullName, mobileNumber);
             navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.detail || 'Failed to register. Email may already be in use.');
@@ -52,6 +53,15 @@ const Register = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="name@example.com"
                             required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Mobile Number</label>
+                        <input
+                            type="tel"
+                            value={mobileNumber}
+                            onChange={(e) => setMobileNumber(e.target.value)}
+                            placeholder="+91 9876543210"
                         />
                     </div>
                     <div className="form-group">

@@ -23,7 +23,9 @@ const Layout = () => {
                     <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <span>📊</span> Dashboard
                     </NavLink>
-                    {/* Add more nav items here if needed */}
+                    <NavLink to="/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                        <span>👤</span> Profile
+                    </NavLink>
                 </nav>
 
                 <div className="user-section">

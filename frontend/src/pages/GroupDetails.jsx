@@ -1,13 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { FiArrowLeft } from 'react-icons/fi';
-import './Dashboard.css'; // Import styles for grid and cards
+import { useAuth } from '../context/AuthContext';
+import { FiArrowLeft, FiEdit2, FiLogOut, FiShield, FiSave, FiX } from 'react-icons/fi';
+import './Dashboard.css';
+import './GroupDetails.css';
 
 const GroupDetails = () => {
     const { groupId } = useParams();
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    const [group, setGroup] = useState(null);
     const [balances, setBalances] = useState([]);
     const [members, setMembers] = useState([]);
+
+    // Edit Group State
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState('');
+    const [editDesc, setEditDesc] = useState('');
+    const [editCategory, setEditCategory] = useState('Trip');
+    const [editCurrency, setEditCurrency] = useState('INR');
+
     const [newMemberEmail, setNewMemberEmail] = useState('');
     const [message, setMessage] = useState('');
     const [desc, setDesc] = useState('');
@@ -17,6 +31,9 @@ const GroupDetails = () => {
     const [splitType, setSplitType] = useState('EQUAL');
     const [customSplits, setCustomSplits] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const categories = ['Trip', 'Home', 'Office', 'Friends', 'Other'];
+    const currencies = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'AED'];
 
     const handleAddExpense = async (e) => {
         e.preventDefault();
@@ -89,12 +106,53 @@ const GroupDetails = () => {
         }
     };
 
+    const fetchGroupDetails = async () => {
+        try {
+            const response = await api.get(`/groups/${groupId}`);
+            setGroup(response.data);
+            setEditName(response.data.name);
+            setEditDesc(response.data.description || '');
+            setEditCategory(response.data.category || 'Trip');
+            setEditCurrency(response.data.currency || 'INR');
+        } catch (error) {
+            console.error("Error fetching group details", error);
+        }
+    };
+
     const fetchMembers = async () => {
         try {
             const response = await api.get(`/groups/${groupId}/members`);
             setMembers(response.data);
         } catch (error) {
             console.error("Error fetching members", error);
+        }
+    };
+
+    const handleUpdateGroup = async (e) => {
+        e.preventDefault();
+        try {
+            await api.put(`/groups/${groupId}`, {
+                name: editName,
+                description: editDesc,
+                category: editCategory,
+                currency: editCurrency
+            });
+            fetchGroupDetails();
+            setIsEditing(false);
+            setMessage('Group updated successfully!');
+            setTimeout(() => setMessage(''), 3000);
+        } catch (error) {
+            setMessage('Failed to update group.');
+        }
+    };
+
+    const handleLeaveGroup = async () => {
+        if (!window.confirm("Are you sure you want to leave this group?")) return;
+        try {
+            await api.post(`/groups/${groupId}/leave`);
+            navigate('/dashboard');
+        } catch (error) {
+            setMessage(error.response?.data?.detail || 'Failed to leave group.');
         }
     };
 
@@ -140,6 +198,7 @@ const GroupDetails = () => {
     };
 
     useEffect(() => {
+        fetchGroupDetails();
         fetchMembers();
         fetchBalances();
         fetchExpenses();
@@ -149,10 +208,68 @@ const GroupDetails = () => {
     return (
         <div className="dashboard-container">
             <div className="dashboard-header">
-                <h2>Group Details</h2>
-                <Link to="/dashboard" className="back-right">
-                    <FiArrowLeft style={{ marginRight: 8 }} /> Back to Dashboard
-                </Link>
+                {isEditing ? (
+                    <form onSubmit={handleUpdateGroup} className="edit-group-inline-form">
+                        <div className="form-row" style={{ marginBottom: '10px' }}>
+                            <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                placeholder="Group Name"
+                                required
+                                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
+                            />
+                            <div className="action-buttons">
+                                <button type="button" onClick={() => setIsEditing(false)} className="btn-icon" title="Cancel">
+                                    <FiX />
+                                </button>
+                                <button type="submit" className="btn-icon success" title="Save">
+                                    <FiSave />
+                                </button>
+                            </div>
+                        </div>
+                        <input
+                            type="text"
+                            value={editDesc}
+                            onChange={(e) => setEditDesc(e.target.value)}
+                            placeholder="Description"
+                            className="description-input"
+                        />
+                        <div className="form-row" style={{ marginTop: '10px' }}>
+                            <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
+                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <select value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
+                                {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                    </form>
+                ) : (
+                    <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <h2 style={{ margin: 0 }}>{group?.name || 'Loading...'}</h2>
+                            <span className="badge category-badge">{group?.category || 'Trip'}</span>
+                            <span className="badge currency-badge">{group?.currency || 'INR'}</span>
+                            {user?.id === group?.admin_id && (
+                                <button onClick={() => setIsEditing(true)} className="btn-edit-icon" title="Edit Group">
+                                    <FiEdit2 />
+                                </button>
+                            )}
+                        </div>
+                        <p style={{ color: '#9ca3af', margin: 0 }}>{group?.description}</p>
+                    </div>
+                )}
+
+                <div className="header-actions">
+                    <Link to="/dashboard" className="back-right">
+                        <FiArrowLeft style={{ marginRight: 8 }} /> Back
+                    </Link>
+                    {group && user?.id !== group?.admin_id && (
+                        <button onClick={handleLeaveGroup} className="btn-leave" title="Leave Group">
+                            <FiLogOut /> Leave
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="create-member-section">
@@ -178,7 +295,7 @@ const GroupDetails = () => {
                 ) : (
                     <div className="group-card" style={{ cursor: 'default', padding: '20px', flex: 1 }}>
                         <div className="group-card-header" style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px' }}>
-                            <h3>Members List</h3>
+                            1954
                         </div>
                         <ul style={{ listStyle: 'none', padding: 0, marginTop: '10px' }}>
                             {members.map(member => {
@@ -189,7 +306,14 @@ const GroupDetails = () => {
                                 return (
                                     <li key={member.id} style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                            <span style={{ fontWeight: '600', color: 'white', fontSize: '1rem' }}>{member.full_name || member.email}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontWeight: '600', color: 'white', fontSize: '1rem' }}>{member.full_name || member.email}</span>
+                                                {group?.admin_id === member.id && (
+                                                    <span className="badge admin-badge" title="Group Admin">
+                                                        <FiShield style={{ marginRight: '4px' }} /> Admin
+                                                    </span>
+                                                )}
+                                            </div>
                                             <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>
                                                 {balance === 0 ? (
                                                     <span style={{ color: '#6b7280' }}>Settled</span>

@@ -5,12 +5,25 @@ from datetime import datetime
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str
+    mobile_number: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    mobile_number: Optional[str] = None
+    default_currency: Optional[str] = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
 class User(UserBase):
     id: int
+    profile_picture: Optional[str] = None
+    default_currency: str = "INR"
+    is_active: bool = True
     
     class Config:
         from_attributes = True
@@ -25,13 +38,22 @@ class TokenData(BaseModel):
 class GroupBase(BaseModel):
     name: str
     description: Optional[str] = None
+    category: str = "Trip"
+    currency: str = "INR"
 
 class GroupCreate(GroupBase):
     pass
 
+class GroupUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    currency: Optional[str] = None
+
 class Group(GroupBase):
     id: int
     created_at: datetime
+    admin_id: Optional[int] = None
     
     class Config:
         from_attributes = True

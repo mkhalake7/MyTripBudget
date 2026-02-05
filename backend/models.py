@@ -10,6 +10,10 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     full_name = Column(String)
+    mobile_number = Column(String, nullable=True)
+    profile_picture = Column(String, nullable=True)  # URL path to profile picture
+    default_currency = Column(String, default="INR")
+    is_active = Column(Boolean, default=True)
     
     groups = relationship("GroupMember", back_populates="user")
     expenses_paid = relationship("Expense", back_populates="payer")
@@ -21,10 +25,14 @@ class Group(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     description = Column(String, nullable=True)
+    category = Column(String, default="Trip")
+    currency = Column(String, default="INR")
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     members = relationship("GroupMember", back_populates="group")
     expenses = relationship("Expense", back_populates="group")
+    admin = relationship("User", foreign_keys=[admin_id])
 
 class GroupMember(Base):
     __tablename__ = "group_members"
