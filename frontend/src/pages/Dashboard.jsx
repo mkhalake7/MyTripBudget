@@ -88,6 +88,12 @@ const Dashboard = () => {
 
     return (
         <div className="dashboard-container">
+            <div className="page-header">
+                <div className="header-badge">Overview</div>
+                <h1>Dashboard</h1>
+                <p>Track your shared expenses and balances across all your groups.</p>
+            </div>
+
             <div className="dashboard-summary">
                 <div className="summary-card">
                     <span className="summary-label">Total balance</span>
