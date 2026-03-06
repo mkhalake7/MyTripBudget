@@ -4,14 +4,19 @@ from sqlalchemy.orm import sessionmaker
 
 import os
 
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-# This points to the parent directory of the current file (backend/)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'sql_app.db')}"
-# For PostgreSQL, use: "postgresql://user:password@postgresserver/db"
+# Use DATABASE_URL env var if set, otherwise default to SQLite
+# On Render, SQLite is stored alongside the app (ephemeral on free tier)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SQLALCHEMY_DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    f"sqlite:///{os.path.join(BASE_DIR, 'sql_app.db')}"
+)
+
+# SQLite needs check_same_thread=False; PostgreSQL does not
+connect_args = {"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, connect_args=connect_args
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
