@@ -1,0 +1,205 @@
+.activity-page-container {
+    max-width: 900px;
+    margin: 0 auto;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.activity-page-header {
+    margin-bottom: 40px;
+}
+
+.header-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: rgba(124, 58, 237, 0.1);
+    color: #a78bfa;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.activity-page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+
+.activity-page-header p {
+    color: #9ca3af;
+    font-size: 1.1rem;
+    max-width: 600px;
+    line-height: 1.6;
+}
+
+.activity-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.activity-feed-item {
+    display: flex;
+    align-items: center;
+    background: rgba(21, 21, 22, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.activity-feed-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(124, 58, 237, 0.2);
+    transform: translateX(4px);
+}
+
+.activity-feed-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.activity-feed-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;
+    margin-left: 20px;
+}
+
+.activity-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.activity-feed-desc {
+    color: white;
+    font-weight: 600;
+    font-size: 1.05rem;
+    line-height: 1.4;
+}
+
+.activity-feed-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.activity-feed-group {
+    color: #a78bfa;
+    font-weight: 600;
+}
+
+.dot {
+    color: #4b5563;
+}
+
+.activity-feed-time {
+    color: #6b7280;
+}
+
+.activity-arrow {
+    color: #374151;
+    font-size: 1.25rem;
+    transition: all 0.2s ease;
+}
+
+.activity-feed-item:hover .activity-arrow {
+    color: #a78bfa;
+    transform: translateX(4px);
+}
+
+.empty-activity {
+    text-align: center;
+    padding: 80px 40px;
+    background: rgba(21, 21, 22, 0.4);
+    border-radius: 32px;
+    border: 2px dashed rgba(255, 255, 255, 0.05);
+}
+
+.empty-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    color: #4b5563;
+}
+
+.empty-activity h3 {
+    color: white;
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+}
+
+.empty-activity p {
+    color: #6b7280;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.loading-shimmer {
+    color: #9ca3af;
+    text-align: center;
+    padding: 100px 0;
+    font-style: italic;
+}
+
+@media (max-width: 640px) {
+    .activity-page-header h1 {
+        font-size: 2rem;
+    }
+
+    .activity-feed-item {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .activity-feed-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.25rem;
+    }
+
+    .activity-feed-content {
+        margin-left: 12px;
+    }
+
+    .activity-feed-desc {
+        font-size: 0.95rem;
+    }
+
+    .activity-arrow {
+        display: none;
+    }
+}

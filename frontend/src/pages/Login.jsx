@@ -25,9 +25,9 @@ const Login = () => {
         <div className="auth-container">
             <div className="auth-card">
                 <div className="auth-header">
-                    <img src="/vita.svg" alt="MyTripBudget Logo" className="auth-logo" style={{ height: '140px' }} />
-                    <h2>Welcome Back</h2>
-                    <p>Sign in to manage your trip budget</p>
+                    <img src="/vita.svg" alt="MyTripBudget Logo" className="auth-logo" />
+                    <h2>Welcome back</h2>
+                    <p>Sign in to manage your budgets</p>
                 </div>
 
                 {error && <div className="error-message">{error}</div>}

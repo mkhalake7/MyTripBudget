@@ -207,6 +207,79 @@
     color: var(--text-muted);
 }
 
+.dashboard-summary {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.summary-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    border-right: 1px solid var(--border-color);
+}
+
+.summary-card:last-child {
+    border-right: none;
+}
+
+.summary-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.summary-value.positive {
+    color: #10b981;
+}
+
+.summary-value.negative {
+    color: #ef4444;
+}
+
+.summary-value.orange {
+    color: #f59e0b;
+}
+
+.group-card-balance {
+    margin: 12px 0;
+    font-size: 0.9rem;
+}
+
+.balance-text {
+    display: block;
+}
+
+.balance-text.positive {
+    color: #10b981;
+}
+
+.balance-text.orange {
+    color: #f59e0b;
+}
+
+.balance-text.settled {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.balance-text strong {
+    font-size: 1.1rem;
+}
+
 .empty-state {
     text-align: center;
     padding: 60px;
@@ -249,4 +322,54 @@
     color: #ef4444;
     /* Red color for delete */
     background: rgba(239, 68, 68, 0.1);
+}
+
+/* Responsive Dashbord */
+@media (max-width: 1024px) {
+    .dashboard-header h2 {
+        font-size: 1.75rem;
+    }
+
+    .dashboard-summary {
+        padding: 16px;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .dashboard-summary {
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+        background: transparent;
+        border: none;
+    }
+
+    .summary-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        margin-bottom: 12px;
+        padding: 20px;
+        border-right: 1px solid var(--border-color);
+        /* Overriding previous border-right reset if needed */
+    }
+
+    .summary-card:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-row {
+        flex-direction: column;
+    }
+
+    .groups-grid {
+        grid-template-columns: 1fr;
+    }
 }

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { FiArrowLeft, FiEdit2, FiLogOut, FiShield, FiSave, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiEdit2, FiLogOut, FiShield, FiSave, FiX, FiPlus, FiActivity, FiDollarSign, FiUsers } from 'react-icons/fi';
 import './Dashboard.css';
 import './GroupDetails.css';
+import { formatCurrency, formatRelativeTime } from '../utils/formatters';
 
 const GroupDetails = () => {
     const { groupId } = useParams();
@@ -21,6 +22,8 @@ const GroupDetails = () => {
     const [editDesc, setEditDesc] = useState('');
     const [editCategory, setEditCategory] = useState('Trip');
     const [editCurrency, setEditCurrency] = useState('INR');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [customSplits, setCustomSplits] = useState([]);
 
     const [newMemberEmail, setNewMemberEmail] = useState('');
     const [message, setMessage] = useState('');
@@ -29,22 +32,22 @@ const GroupDetails = () => {
     const [payerId, setPayerId] = useState('');
     const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
     const [splitType, setSplitType] = useState('EQUAL');
-    const [customSplits, setCustomSplits] = useState([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [activities, setActivities] = useState([]);
+    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [settlePayeeId, setSettlePayeeId] = useState('');
+    const [settleAmount, setSettleAmount] = useState('');
+    const [expenseCategory, setExpenseCategory] = useState('General');
+    const [expenseNotes, setExpenseNotes] = useState('');
 
-    const categories = ['Trip', 'Home', 'Office', 'Friends', 'Other'];
-    const currencies = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'AED'];
+    const categories = ['Trip', 'Home', 'Couple', 'Other'];
+    const currencies = ['INR', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD'];
+    const expenseCategories = ['General', 'Food', 'Transport', 'Rent', 'Utilities', 'Entertainment', 'Other'];
 
     const handleAddExpense = async (e) => {
         e.preventDefault();
 
-        // Prevent duplicate submissions
-        if (isSubmitting) {
-            console.log("Already submitting, ignoring duplicate request");
-            return;
-        }
+        if (isSubmitting) return;
 
-        // Validation for custom splits
         if (splitType === 'EXACT') {
             const total = customSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
             if (Math.abs(total - parseFloat(amount)) > 0.01) {
@@ -62,7 +65,6 @@ const GroupDetails = () => {
         }
 
         setIsSubmitting(true);
-        console.log("Submitting expense...");
 
         try {
             const payload = {
@@ -71,10 +73,11 @@ const GroupDetails = () => {
                 group_id: parseInt(groupId),
                 payer_id: parseInt(payerId),
                 split_type: splitType,
+                category: expenseCategory,
+                notes: expenseNotes,
                 date: expenseDate
             };
 
-            // Add splits for EXACT and PERCENTAGE
             if (splitType !== 'EQUAL' && customSplits.length > 0) {
                 payload.splits = customSplits.map(split => ({
                     user_id: parseInt(split.user_id),
@@ -82,9 +85,7 @@ const GroupDetails = () => {
                 }));
             }
 
-            console.log("Posting expense with payload:", payload);
             await api.post('/expenses/', payload);
-            console.log("Expense posted successfully");
 
             setDesc('');
             setAmount('');
@@ -92,18 +93,54 @@ const GroupDetails = () => {
             setExpenseDate(new Date().toISOString().split('T')[0]);
             setSplitType('EQUAL');
             setCustomSplits([]);
-            fetchBalances(); // Refresh balances
-            fetchExpenses(); // Refresh expenses list
+            setExpenseCategory('General');
+            setExpenseNotes('');
+
+            refreshAllData();
             setMessage('Expense added successfully!');
             setTimeout(() => setMessage(''), 3000);
         } catch (error) {
             console.error("Error adding expense", error);
-            console.error("Error response:", error.response?.data);
-            console.error("Error status:", error.response?.status);
             setMessage(error.response?.data?.detail || 'Failed to add expense.');
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleSettleUp = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/expenses/settle', {
+                group_id: parseInt(groupId),
+                payee_id: parseInt(settlePayeeId),
+                amount: parseFloat(settleAmount)
+            });
+            setIsSettleModalOpen(false);
+            setSettlePayeeId('');
+            setSettleAmount('');
+            refreshAllData();
+            setMessage('Settlement recorded!');
+            setTimeout(() => setMessage(''), 3000);
+        } catch (error) {
+            setMessage('Failed to record settlement.');
+        }
+    };
+
+    const fetchActivities = async () => {
+        try {
+            const response = await api.get(`/expenses/activities?group_id=${groupId}`);
+            setActivities(response.data);
+        } catch (error) {
+            console.error("Error fetching activities", error);
+        }
+    };
+
+    const refreshAllData = () => {
+        fetchGroupDetails();
+        fetchMembers();
+        fetchBalances();
+        fetchExpenses();
+        fetchActivities();
     };
 
     const fetchGroupDetails = async () => {
@@ -181,7 +218,10 @@ const GroupDetails = () => {
     useEffect(() => {
         console.log("Members state:", members);
         console.log("Balances state:", balances);
-    }, [members, balances]);
+        if (members.length > 0 && customSplits.length === 0) {
+            setCustomSplits(members.map(m => ({ user_id: m.id, amount: '' })));
+        }
+    }, [members, balances, customSplits.length]);
 
     const addMember = async (e) => {
         e.preventDefault();
@@ -198,365 +238,363 @@ const GroupDetails = () => {
     };
 
     useEffect(() => {
-        fetchGroupDetails();
-        fetchMembers();
-        fetchBalances();
-        fetchExpenses();
+        refreshAllData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [groupId]);
 
     return (
-        <div className="dashboard-container">
-            <div className="dashboard-header">
+        <div className="group-details-page-premium">
+            {isSettleModalOpen && (
+                <div className="modal-overlay-premium">
+                    <div className="modal-content-premium">
+                        <div className="modal-header-premium">
+                            <h3>Settle Up</h3>
+                            <button onClick={() => setIsSettleModalOpen(false)} className="btn-close-modal"><FiX /></button>
+                        </div>
+                        <form onSubmit={handleSettleUp} className="premium-settle-form">
+                            <div className="input-group">
+                                <label>Who did you pay?</label>
+                                <select
+                                    value={settlePayeeId}
+                                    onChange={(e) => setSettlePayeeId(e.target.value)}
+                                    required
+                                >
+                                    <option value="">Select a member</option>
+                                    {members.filter(m => m.id !== user.id).map(m => (
+                                        <option key={m.id} value={m.id}>{m.full_name || m.email}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="input-group">
+                                <label>Amount Paid</label>
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={settleAmount}
+                                    onChange={(e) => setSettleAmount(e.target.value)}
+                                    required
+                                    step="0.01"
+                                />
+                            </div>
+                            <button type="submit" className="btn-confirm-settle">Save Settlement</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            <div className="group-header-premium">
                 {isEditing ? (
-                    <form onSubmit={handleUpdateGroup} className="edit-group-inline-form">
-                        <div className="form-row" style={{ marginBottom: '10px' }}>
+                    <form onSubmit={handleUpdateGroup} className="edit-group-inline-form-premium">
+                        <div className="edit-header-row">
                             <input
                                 type="text"
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
                                 placeholder="Group Name"
                                 required
-                                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
+                                className="edit-name-input"
                             />
-                            <div className="action-buttons">
-                                <button type="button" onClick={() => setIsEditing(false)} className="btn-icon" title="Cancel">
+                            <div className="header-action-btns">
+                                <button type="button" onClick={() => setIsEditing(false)} className="icon-btn-cancel" title="Cancel">
                                     <FiX />
                                 </button>
-                                <button type="submit" className="btn-icon success" title="Save">
+                                <button type="submit" className="icon-btn-save" title="Save">
                                     <FiSave />
                                 </button>
                             </div>
                         </div>
-                        <input
-                            type="text"
+                        <textarea
                             value={editDesc}
                             onChange={(e) => setEditDesc(e.target.value)}
-                            placeholder="Description"
-                            className="description-input"
+                            placeholder="Add a description..."
+                            className="edit-desc-textarea"
                         />
-                        <div className="form-row" style={{ marginTop: '10px' }}>
-                            <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
-                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                            <select value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
-                                {currencies.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
+                        <div className="edit-meta-row">
+                            <div className="select-wrapper">
+                                <label>Category</label>
+                                <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
+                                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+                            <div className="select-wrapper">
+                                <label>Currency</label>
+                                <select value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
+                                    {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
                         </div>
                     </form>
                 ) : (
-                    <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                            <h2 style={{ margin: 0 }}>{group?.name || 'Loading...'}</h2>
-                            <span className="badge category-badge">{group?.category || 'Trip'}</span>
-                            <span className="badge currency-badge">{group?.currency || 'INR'}</span>
-                            {user?.id === group?.admin_id && (
-                                <button onClick={() => setIsEditing(true)} className="btn-edit-icon" title="Edit Group">
-                                    <FiEdit2 />
-                                </button>
-                            )}
-                        </div>
-                        <p style={{ color: '#9ca3af', margin: 0 }}>{group?.description}</p>
-                    </div>
-                )}
-
-                <div className="header-actions">
-                    <Link to="/dashboard" className="back-right">
-                        <FiArrowLeft style={{ marginRight: 8 }} /> Back
-                    </Link>
-                    {group && user?.id !== group?.admin_id && (
-                        <button onClick={handleLeaveGroup} className="btn-leave" title="Leave Group">
-                            <FiLogOut /> Leave
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            <div className="create-member-section">
-                <h3>Add New Member</h3>
-                <form onSubmit={addMember} className="create-group-form">
-                    <input
-                        type="text"
-                        placeholder="Enter new member email..."
-                        value={newMemberEmail}
-                        onChange={(e) => setNewMemberEmail(e.target.value)}
-                        required
-                    />
-                    <button type="submit" className="btn btn-primary">Add Member</button>
-                </form>
-                {message && <div className="message success" style={{ marginTop: '10px' }}>{message}</div>}
-            </div>
-
-            <div className="members-section" style={{ marginTop: '2rem', display: 'flex', gap: '20px' }}>
-                {members.length === 0 ? (
-                    <div className="empty-state" style={{ flex: 1 }}>
-                        <p>No members in this group yet.</p>
-                    </div>
-                ) : (
-                    <div className="group-card" style={{ cursor: 'default', padding: '20px', flex: 1 }}>
-                        <div className="group-card-header" style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px' }}>
-                            1954
-                        </div>
-                        <ul style={{ listStyle: 'none', padding: 0, marginTop: '10px' }}>
-                            {members.map(member => {
-                                const balanceData = balances.find(b => b.user_id === member.id);
-                                const balance = balanceData ? balanceData.balance : 0;
-                                const debts = balanceData ? balanceData.debts : [];
-
-                                return (
-                                    <li key={member.id} style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <span style={{ fontWeight: '600', color: 'white', fontSize: '1rem' }}>{member.full_name || member.email}</span>
-                                                {group?.admin_id === member.id && (
-                                                    <span className="badge admin-badge" title="Group Admin">
-                                                        <FiShield style={{ marginRight: '4px' }} /> Admin
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>
-                                                {balance === 0 ? (
-                                                    <span style={{ color: '#6b7280' }}>Settled</span>
-                                                ) : (
-                                                    <>
-                                                        <span style={{ color: balance > 0 ? '#10b981' : '#ef4444' }}>
-                                                            {balance > 0 ? '+' : '-'}${Math.abs(balance).toFixed(2)}
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </span>
-                                        </div>
-                                        {debts.length > 0 && (
-                                            <div style={{ fontSize: '0.9rem', marginLeft: '12px' }}>
-                                                {debts.map((debt, idx) => {
-                                                    const isDebtor = debt.debtor_id === member.id;
-                                                    const amountColor = isDebtor ? '#ef4444' : '#10b981';
-                                                    return (
-                                                        <div key={idx} style={{
-                                                            color: 'white',
-                                                            padding: '3px 0',
-                                                            fontWeight: '500'
-                                                        }}>
-                                                            {isDebtor ? (
-                                                                <>↑ Owes {debt.creditor_name}: <span style={{ color: amountColor }}>${debt.amount.toFixed(2)}</span></>
-                                                            ) : (
-                                                                <>↓ Gets back from {debt.debtor_name}: <span style={{ color: amountColor }}>${debt.amount.toFixed(2)}</span></>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </div>
-                )}
-
-                <div className="group-card" style={{ cursor: 'default', padding: '20px', flex: 1 }}>
-                    <div className="group-card-header" style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px' }}>
-                        <h3>Add Expense</h3>
-                    </div>
-                    <form onSubmit={handleAddExpense} className="create-group-form" style={{ flexDirection: 'column' }}>
-                        <input
-                            type="text"
-                            placeholder="Description"
-                            value={desc}
-                            onChange={(e) => setDesc(e.target.value)}
-                            required
-                            style={{ marginBottom: '10px', width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                        />
-                        <input
-                            type="number"
-                            placeholder="Amount"
-                            value={amount}
-                            onChange={(e) => {
-                                setAmount(e.target.value);
-                                // Reset custom splits when amount changes
-                                if (splitType !== 'EQUAL') {
-                                    setCustomSplits(members.map(m => ({ user_id: m.id, amount: '' })));
-                                }
-                            }}
-                            required
-                            step="0.01"
-                            style={{ marginBottom: '10px', width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                        />
-                        <select
-                            value={payerId}
-                            onChange={(e) => setPayerId(e.target.value)}
-                            required
-                            style={{ marginBottom: '10px', width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                        >
-                            <option value="">Select Payer</option>
-                            {members.map(member => (
-                                <option key={member.id} value={member.id}>
-                                    {member.full_name || member.email}
-                                </option>
-                            ))}
-                        </select>
-                        <input
-                            type="date"
-                            value={expenseDate}
-                            onChange={(e) => setExpenseDate(e.target.value)}
-                            required
-                            style={{ marginBottom: '10px', width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                        />
-                        <select
-                            value={splitType}
-                            onChange={(e) => {
-                                const newType = e.target.value;
-                                setSplitType(newType);
-                                if (newType !== 'EQUAL') {
-                                    setCustomSplits(members.map(m => ({ user_id: m.id, amount: '' })));
-                                } else {
-                                    setCustomSplits([]);
-                                }
-                            }}
-                            style={{ marginBottom: '10px', width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                        >
-                            <option value="EQUAL">Equal Split</option>
-                            <option value="EXACT">Exact Amounts</option>
-                            <option value="PERCENTAGE">Percentage</option>
-                        </select>
-
-                        {splitType !== 'EQUAL' && (
-                            <div style={{ marginBottom: '10px', maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px', padding: '10px' }}>
-                                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem' }}>
-                                    {splitType === 'EXACT' ? 'Enter amount for each member:' : 'Enter percentage for each member:'}
-                                </h4>
-                                {members.map((member, idx) => (
-                                    <div key={member.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', gap: '8px' }}>
-                                        <label style={{ flex: 1, fontSize: '0.85rem' }}>{member.full_name || member.email}:</label>
-                                        <input
-                                            type="number"
-                                            placeholder={splitType === 'EXACT' ? '0.00' : '0'}
-                                            value={customSplits[idx]?.amount || ''}
-                                            onChange={(e) => {
-                                                const newSplits = [...customSplits];
-                                                newSplits[idx] = { user_id: member.id, amount: e.target.value };
-                                                setCustomSplits(newSplits);
-                                            }}
-                                            step={splitType === 'EXACT' ? '0.01' : '1'}
-                                            style={{ width: '100px', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' }}
-                                        />
-                                        {splitType === 'PERCENTAGE' && <span style={{ fontSize: '0.85rem' }}>%</span>}
-                                    </div>
-                                ))}
-                                {splitType === 'EXACT' && (
-                                    <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '8px' }}>
-                                        Total: ${customSplits.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toFixed(2)} / ${amount || '0.00'}
-                                    </div>
-                                )}
-                                {splitType === 'PERCENTAGE' && (
-                                    <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '8px' }}>
-                                        Total: {customSplits.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toFixed(2)}% / 100%
-                                    </div>
+                    <div className="group-info-main">
+                        <div className="header-top-row">
+                            <div className="title-area">
+                                <h1>{group?.name || 'Loading...'}</h1>
+                                <div className="badge-group">
+                                    <span className="premium-badge category">{group?.category || 'Trip'}</span>
+                                    <span className="premium-badge currency">{group?.currency || 'INR'}</span>
+                                </div>
+                                {user?.id === group?.admin_id && (
+                                    <button onClick={() => setIsEditing(true)} className="edit-trigger" title="Edit Group">
+                                        <FiEdit2 />
+                                    </button>
                                 )}
                             </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary"
-                            style={{ width: '100%' }}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? 'Adding...' : 'Add Expense'}
-                        </button>
-                    </form>
-                </div>
+                            <div className="header-actions-premium">
+                                <button
+                                    onClick={() => setIsSettleModalOpen(true)}
+                                    className="btn-premium-settle"
+                                >
+                                    Settle Up
+                                </button>
+                                <Link to="/dashboard" className="btn-back-premium">
+                                    <FiArrowLeft /> Dashboard
+                                </Link>
+                                {group && user?.id !== group?.admin_id && (
+                                    <button onClick={handleLeaveGroup} className="btn-leave-premium" title="Leave Group">
+                                        <FiLogOut /> Leave
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        {group?.description && <p className="group-description-text">{group?.description}</p>}
+                    </div>
+                )}
             </div>
 
-            <div className="expenses-list-section" style={{ marginTop: '2rem' }}>
-                <div className="group-card" style={{ cursor: 'default', padding: '20px', marginTop: '20px' }}>
-                    <div className="group-card-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', marginBottom: '15px' }}>
-                        <h3 style={{ color: 'white' }}>Expenses</h3>
-                    </div>
-                    {expenses.length === 0 ? (
-                        <div className="empty-state" style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>
-                            <p>No expenses yet. Add your first expense above!</p>
-                        </div>
-                    ) : (
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                            {expenses.map(expense => {
-                                const expenseDate = new Date(expense.created_at);
-                                const formattedDate = expenseDate.toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                });
+            {message && <div className={`status-msg-premium ${message.includes('success') ? 'success' : 'error'}`}>{message}</div>}
 
-                                return (
-                                    <li key={expense.id} style={{
-                                        marginBottom: '12px',
-                                        padding: '16px',
-                                        background: 'rgba(255, 255, 255, 0.05)',
-                                        borderRadius: '8px',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                        transition: 'all 0.2s ease',
-                                        cursor: 'default'
-                                    }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{
-                                                    fontSize: '1.05rem',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    marginBottom: '4px'
-                                                }}>
-                                                    {expense.description}
+            <div className="group-details-grid-premium">
+                {/* Left Column: Members & Add Member */}
+                <div className="grid-column members-col">
+                    <div className="premium-card">
+                        <div className="card-header-premium">
+                            <FiUsers className="header-icon" />
+                            <h3>Members</h3>
+                        </div>
+
+                        <div className="add-member-inline-premium">
+                            <form onSubmit={addMember}>
+                                <input
+                                    type="email"
+                                    placeholder="Add by email..."
+                                    value={newMemberEmail}
+                                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                                    required
+                                />
+                                <button type="submit"><FiPlus /></button>
+                            </form>
+                        </div>
+
+                        {members.length === 0 ? (
+                            <div className="empty-state-small">No members yet</div>
+                        ) : (
+                            <div className="members-scroll-area">
+                                {members.map(member => {
+                                    const balanceData = balances.find(b => b.user_id === member.id);
+                                    const balance = balanceData ? balanceData.balance : 0;
+                                    const debts = balanceData ? balanceData.debts : [];
+
+                                    return (
+                                        <div key={member.id} className="member-row-premium">
+                                            <div className="member-main-info">
+                                                <div className="member-identity">
+                                                    <span className="member-name">{member.full_name || member.email}</span>
+                                                    {group?.admin_id === member.id && (
+                                                        <span className="admin-tag"><FiShield /></span>
+                                                    )}
                                                 </div>
-                                                <div style={{
-                                                    fontSize: '0.85rem',
-                                                    color: '#9ca3af',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px'
-                                                }}>
-                                                    <span>Paid by <span style={{ color: '#d1d5db', fontWeight: '500' }}>{expense.payer_name}</span></span>
-                                                    <span style={{ color: '#4b5563' }}>•</span>
-                                                    <span>{formattedDate}</span>
+                                                <div className={`member-balance ${balance >= 0 ? 'positive' : 'negative'}`}>
+                                                    {balance === 0 ? 'Settled' : formatCurrency(balance, group?.currency, true)}
                                                 </div>
                                             </div>
-                                            <div style={{
-                                                fontSize: '1.1rem',
-                                                fontWeight: 'bold',
-                                                color: '#10b981',
-                                                marginLeft: '16px'
-                                            }}>
-                                                ${expense.amount.toFixed(2)}
+
+                                            {debts.length > 0 && (
+                                                <div className="member-debts-list">
+                                                    {debts.map((debt, idx) => (
+                                                        <div key={idx} className="debt-detail">
+                                                            {debt.debtor_id === member.id ? (
+                                                                <>Owes {debt.creditor_name.split(' ')[0]}: <span>{formatCurrency(debt.amount, group?.currency)}</span></>
+                                                            ) : (
+                                                                <>Gets from {debt.debtor_name.split(' ')[0]}: <span>{formatCurrency(debt.amount, group?.currency)}</span></>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Middle Column: Add Expense & Expenses List */}
+                <div className="grid-column main-col">
+                    <div className="premium-card highlight-card">
+                        <div className="card-header-premium">
+                            <FiDollarSign className="header-icon" />
+                            <h3>Add Expense</h3>
+                        </div>
+                        <form onSubmit={handleAddExpense} className="premium-expense-form">
+                            <div className="form-row-multi">
+                                <div className="input-field main">
+                                    <input
+                                        type="text"
+                                        placeholder="What was it for?"
+                                        value={desc}
+                                        onChange={(e) => setDesc(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="input-field amount">
+                                    <span className="curr-sym">{group?.currency}</span>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={amount}
+                                        onChange={(e) => {
+                                            setAmount(e.target.value);
+                                            if (splitType !== 'EQUAL') {
+                                                setCustomSplits(members.map(m => ({ user_id: m.id, amount: '' })));
+                                            }
+                                        }}
+                                        required
+                                        step="0.01"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-row-multi">
+                                <div className="select-field">
+                                    <label>Paid by</label>
+                                    <select value={payerId} onChange={(e) => setPayerId(e.target.value)} required>
+                                        <option value="">Select payer</option>
+                                        {members.map(m => (
+                                            <option key={m.id} value={m.id}>{m.full_name || m.email}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="select-field">
+                                    <label>Category</label>
+                                    <select value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)}>
+                                        {expenseCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-row-multi">
+                                <div className="date-field">
+                                    <label>Date</label>
+                                    <input type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} required />
+                                </div>
+                                <div className="select-field">
+                                    <label>Split Type</label>
+                                    <select
+                                        value={splitType}
+                                        onChange={(e) => {
+                                            const newType = e.target.value;
+                                            setSplitType(newType);
+                                            if (newType !== 'EQUAL') {
+                                                setCustomSplits(members.map(m => ({ user_id: m.id, amount: '' })));
+                                            } else {
+                                                setCustomSplits([]);
+                                            }
+                                        }}
+                                    >
+                                        <option value="EQUAL">Split Equally</option>
+                                        <option value="EXACT">Exact Amounts</option>
+                                        <option value="PERCENTAGE">Percentages</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {splitType !== 'EQUAL' && (
+                                <div className="custom-splits-area">
+                                    <h4>{splitType === 'EXACT' ? 'Individual Amounts' : 'Percentage Share'}</h4>
+                                    <div className="splits-grid">
+                                        {members.map((member, idx) => (
+                                            <div key={member.id} className="split-row">
+                                                <span>{member.full_name?.split(' ')[0] || member.email.split('@')[0]}</span>
+                                                <div className="split-input-wrap">
+                                                    <input
+                                                        type="number"
+                                                        value={customSplits[idx]?.amount || ''}
+                                                        onChange={(e) => {
+                                                            const newSplits = [...customSplits];
+                                                            newSplits[idx] = { user_id: member.id, amount: e.target.value };
+                                                            setCustomSplits(newSplits);
+                                                        }}
+                                                        placeholder="0"
+                                                    />
+                                                    {splitType === 'PERCENTAGE' && <i>%</i>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <button type="submit" className="btn-add-expense-premium" disabled={isSubmitting}>
+                                {isSubmitting ? 'Adding...' : <><FiPlus /> Add Expense</>}
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="premium-card">
+                        <div className="card-header-premium">
+                            <FiActivity className="header-icon" />
+                            <h3>Expenses</h3>
+                        </div>
+                        <div className="expenses-list-premium">
+                            {expenses.length === 0 ? (
+                                <div className="empty-state-large">No expenses recorded yet.</div>
+                            ) : (
+                                expenses.map(expense => (
+                                    <div key={expense.id} className="expense-item-premium">
+                                        <div className="exp-main">
+                                            <div className="exp-info">
+                                                <span className="exp-desc">{expense.description}</span>
+                                                <div className="exp-meta">
+                                                    <span className="exp-cat">{expense.category}</span>
+                                                    <span className="exp-payer">Paid by {expense.payer_name}</span>
+                                                    <span className="exp-date">{new Date(expense.date || expense.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                            <div className="exp-amount">
+                                                {formatCurrency(expense.amount, group?.currency)}
                                             </div>
                                         </div>
-                                        {expense.split_type && (
-                                            <div style={{
-                                                fontSize: '0.75rem',
-                                                color: '#6b7280',
-                                                marginTop: '8px',
-                                                paddingTop: '8px',
-                                                borderTop: '1px solid rgba(255, 255, 255, 0.05)'
-                                            }}>
-                                                <span style={{
-                                                    background: 'rgba(139, 92, 246, 0.2)',
-                                                    color: '#a78bfa',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: '500',
-                                                    textTransform: 'uppercase'
-                                                }}>
-                                                    {expense.split_type}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
+                                        {expense.notes && <p className="exp-notes">{expense.notes}</p>}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column: Recent Activity */}
+                <div className="grid-column activity-col">
+                    <div className="premium-card">
+                        <div className="card-header-premium">
+                            <FiActivity className="header-icon" />
+                            <h3>Activity</h3>
+                        </div>
+                        <div className="activity-list-premium">
+                            {activities.length === 0 ? (
+                                <div className="empty-state-small">No activity logs</div>
+                            ) : (
+                                activities.map(activity => (
+                                    <div key={activity.id} className="activity-item-premium">
+                                        <p>{activity.description}</p>
+                                        <span>{formatRelativeTime(activity.created_at)}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
-
         </div>
     );
 };

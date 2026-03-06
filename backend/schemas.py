@@ -70,6 +70,8 @@ class SplitDetail(BaseModel):
 class ExpenseCreate(ExpenseBase):
     payer_id: Optional[int] = None
     split_type: Optional[str] = "EQUAL"  # EQUAL, EXACT, PERCENTAGE
+    category: Optional[str] = "General"
+    notes: Optional[str] = None
     splits: Optional[List[SplitDetail]] = None  # Only for EXACT/PERCENTAGE
     date: Optional[str] = None  # User-specified expense date
 
@@ -78,11 +80,57 @@ class Expense(ExpenseBase):
     payer_id: int
     payer_name: Optional[str] = None
     split_type: str
+    category: str
+    notes: Optional[str] = None
     created_at: datetime
     date: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+class PaymentBase(BaseModel):
+    amount: float
+    payee_id: int
+    group_id: int
+    notes: Optional[str] = None
+    date: Optional[datetime] = None
+
+class PaymentCreate(PaymentBase):
+    pass
+
+class Payment(PaymentBase):
+    id: int
+    payer_id: int
+    payer_name: Optional[str] = None
+    payee_name: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class Activity(BaseModel):
+    id: int
+    user_id: int
+    user_name: Optional[str] = None
+    group_id: int
+    group_name: Optional[str] = None
+    type: str
+    description: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class GroupSummary(BaseModel):
+    group_id: int
+    group_name: str
+    balance: float
+
+class DashboardSummary(BaseModel):
+    total_balance: float
+    owed_to_you: float
+    you_owe: float
+    group_summaries: List[GroupSummary]
 
 class ExpenseSplitResponse(BaseModel):
     user_id: int

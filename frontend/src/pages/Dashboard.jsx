@@ -4,37 +4,44 @@ import { Link } from 'react-router-dom';
 import './Dashboard.css';
 
 import { FiTrash2 } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../utils/formatters';
 
 const Dashboard = () => {
+    const { user } = useAuth();
     const [groups, setGroups] = useState([]);
     const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDescription, setNewGroupDescription] = useState('');
     const [newGroupCategory, setNewGroupCategory] = useState('Trip');
-    const [newGroupCurrency, setNewGroupCurrency] = useState('INR');
+    const [newGroupCurrency, setNewGroupCurrency] = useState(user?.default_currency || 'INR');
     const [message, setMessage] = useState('');
 
     const categories = ['Trip', 'Home', 'Office', 'Friends', 'Other'];
     const currencies = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'AED'];
 
-    const fetchGroups = async () => {
+    const [summary, setSummary] = useState({ total_balance: 0, owed_to_you: 0, you_owe: 0, group_summaries: [] });
+
+    const fetchDashboardData = async () => {
         try {
-            const response = await api.get('/groups/');
-            setGroups(response.data);
+            const [groupsRes, summaryRes] = await Promise.all([
+                api.get('/groups/'),
+                api.get('/expenses/summary')
+            ]);
+            setGroups(groupsRes.data);
+            setSummary(summaryRes.data);
         } catch (error) {
-            console.error("Error fetching groups", error);
+            console.error("Error fetching dashboard data", error);
             const status = error.response?.status;
-            const detail = error.response?.data?.detail || error.message;
             if (status === 401 || status === 403) {
                 setMessage('Not authenticated - please log in.');
             } else {
-                setMessage(`Failed to load groups: ${detail}`);
+                setMessage(`Failed to load data.`);
             }
         }
     };
 
     useEffect(() => {
-        // eslint-disable-next-line
-        fetchGroups();
+        fetchDashboardData();
     }, []);
 
     const createGroup = async (e) => {
@@ -50,7 +57,7 @@ const Dashboard = () => {
             setNewGroupDescription('');
             setNewGroupCategory('Trip');
             setNewGroupCurrency('INR');
-            fetchGroups();
+            fetchDashboardData();
             setMessage('Group created successfully!');
             setTimeout(() => setMessage(''), 3000);
         } catch (error) {
@@ -60,11 +67,11 @@ const Dashboard = () => {
     };
 
     const deleteGroup = async (e, groupId) => {
-        e.preventDefault(); // Prevent navigation to group details
+        e.preventDefault();
         if (window.confirm("Are you sure you want to delete this group? This action cannot be undone.")) {
             try {
                 await api.delete(`/groups/${groupId}`);
-                fetchGroups();
+                fetchDashboardData();
                 setMessage('Group deleted successfully.');
                 setTimeout(() => setMessage(''), 3000);
             } catch (error) {
@@ -74,11 +81,38 @@ const Dashboard = () => {
         }
     };
 
+    const getGroupBalance = (groupId) => {
+        const groupSummary = summary.group_summaries.find(s => s.group_id === groupId);
+        return groupSummary ? groupSummary.balance : 0;
+    };
+
     return (
         <div className="dashboard-container">
+            <div className="dashboard-summary">
+                <div className="summary-card">
+                    <span className="summary-label">Total balance</span>
+                    <span className={`summary-value ${summary.total_balance >= 0 ? 'positive' : 'negative'}`}>
+                        {formatCurrency(summary.total_balance, user?.default_currency || 'INR', true)}
+                    </span>
+                </div>
+                <div className="summary-card">
+                    <span className="summary-label">You are owed</span>
+                    <span className="summary-value positive">
+                        {formatCurrency(summary.owed_to_you, user?.default_currency || 'INR')}
+                    </span>
+                </div>
+                <div className="summary-card">
+                    <span className="summary-label">You owe</span>
+                    <span className="summary-value orange">
+                        {formatCurrency(summary.you_owe, user?.default_currency || 'INR')}
+                    </span>
+                </div>
+            </div>
+
             <div className="dashboard-header">
                 <h2>Your Groups</h2>
             </div>
+            {/* ... rest of the form ... */}
 
             <div className="create-group-section">
                 <form onSubmit={createGroup} className="create-group-form">
@@ -142,6 +176,15 @@ const Dashboard = () => {
                             <div className="group-badges">
                                 <span className="badge category-badge">{group.category || 'Trip'}</span>
                                 <span className="badge currency-badge">{group.currency || 'INR'}</span>
+                            </div>
+                            <div className="group-card-balance">
+                                {getGroupBalance(group.id) > 0 ? (
+                                    <span className="balance-text positive">you are owed <strong>{formatCurrency(getGroupBalance(group.id), group.currency)}</strong></span>
+                                ) : getGroupBalance(group.id) < 0 ? (
+                                    <span className="balance-text orange">you owe <strong>{formatCurrency(Math.abs(getGroupBalance(group.id)), group.currency)}</strong></span>
+                                ) : (
+                                    <span className="balance-text settled">no expenses</span>
+                                )}
                             </div>
                             <p>{group.description || 'No description'}</p>
                             <div className="group-meta">

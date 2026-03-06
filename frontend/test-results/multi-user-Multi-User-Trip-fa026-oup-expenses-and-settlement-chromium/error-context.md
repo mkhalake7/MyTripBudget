@@ -1,0 +1,93 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - img "MyTripBudget Logo" [ref=e7]
+    - navigation [ref=e8]:
+      - link "📊 Dashboard" [ref=e9] [cursor=pointer]:
+        - /url: /dashboard
+        - generic [ref=e10]: 📊
+        - text: Dashboard
+      - link "🔔 Recent Activity" [ref=e11] [cursor=pointer]:
+        - /url: /activity
+        - generic [ref=e12]: 🔔
+        - text: Recent Activity
+      - link "👤 Profile" [ref=e13] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=e14]: 👤
+        - text: Profile
+    - generic [ref=e15]:
+      - generic [ref=e16]: A
+      - generic [ref=e17]:
+        - generic [ref=e18]: Alpha azh6856724
+        - generic [ref=e19]: usera_azh6856724@example.com
+      - button "🚪" [ref=e20] [cursor=pointer]
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - heading "E2E Trip azh6856724" [level=2] [ref=e26]
+            - generic [ref=e27]: Trip
+            - generic [ref=e28]: INR
+            - button "Edit Group" [ref=e29] [cursor=pointer]:
+              - img [ref=e30]
+          - paragraph [ref=e32]: Testing multi-user flow
+        - generic [ref=e33]:
+          - button "Settle Up" [ref=e34] [cursor=pointer]
+          - link "Back" [ref=e35] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e36]
+            - text: Back
+      - generic [ref=e38]:
+        - heading "Add New Member" [level=3] [ref=e39]
+        - generic [ref=e40]:
+          - textbox "Enter new member email..." [ref=e41]
+          - button "Add Member" [ref=e42] [cursor=pointer]
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: "1954"
+          - list [ref=e46]:
+            - listitem [ref=e47]:
+              - generic [ref=e48]:
+                - generic [ref=e49]:
+                  - generic [ref=e50]: Alpha azh6856724
+                  - generic "Group Admin" [ref=e51]:
+                    - img [ref=e52]
+                    - text: Admin
+                - generic [ref=e54]: Settled
+        - generic [ref=e55]:
+          - heading "Add Expense" [level=3] [ref=e57]
+          - generic [ref=e58]:
+            - textbox "Description" [ref=e59]
+            - spinbutton [ref=e60]
+            - combobox [ref=e61]:
+              - option "Select Payer" [selected]
+              - option "Alpha azh6856724"
+            - textbox [ref=e62]: 2026-03-06
+            - combobox [ref=e63]:
+              - option "General" [selected]
+              - option "Food"
+              - option "Transport"
+              - option "Rent"
+              - option "Utilities"
+              - option "Entertainment"
+              - option "Other"
+            - textbox "Add notes (optional)..." [ref=e64]
+            - combobox [ref=e65]:
+              - option "Equal Split" [selected]
+              - option "Exact Amounts"
+              - option "Percentage"
+            - button "Add Expense" [ref=e66] [cursor=pointer]
+      - generic [ref=e67]:
+        - generic [ref=e70]:
+          - heading "Expenses" [level=3] [ref=e72]
+          - paragraph [ref=e74]: No expenses yet. Add your first expense!
+        - generic [ref=e77]:
+          - heading "Recent Activity" [level=3] [ref=e79]
+          - list [ref=e80]:
+            - listitem [ref=e81]:
+              - generic [ref=e82]: Alpha azh6856724 created the group 'E2E Trip azh6856724'
+              - generic [ref=e83]: 04:45 PM
+```

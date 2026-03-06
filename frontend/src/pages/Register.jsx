@@ -27,9 +27,9 @@ const Register = () => {
         <div className="auth-container">
             <div className="auth-card">
                 <div className="auth-header">
-                    <img src="/vita.svg" alt="MyTripBudget Logo" className="auth-logo" style={{ height: '140px' }} />
-                    <h2>Create Account</h2>
-                    <p>Start tracking your group expenses today</p>
+                    <img src="/vita.svg" alt="MyTripBudget Logo" className="auth-logo" />
+                    <h2>Create account</h2>
+                    <p>Start tracking your group expenses</p>
                 </div>
 
                 {error && <div className="error-message">{error}</div>}

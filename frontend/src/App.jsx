@@ -4,7 +4,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import GroupDetails from './pages/GroupDetails';
+import RecentActivity from './pages/RecentActivity';
 import Profile from './pages/Profile';
+import Home from './pages/Home';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -20,14 +22,15 @@ function App() {
   return (
     <div className="App">
       <Routes>
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/activity" element={<RecentActivity />} />
           <Route path="/groups/:groupId" element={<GroupDetails />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
     </div>

@@ -24,6 +24,15 @@ def create_group(group: schemas.GroupCreate, current_user: models.User = Depends
     # Add creator as a member
     db_member = models.GroupMember(user_id=current_user.id, group_id=db_group.id)
     db.add(db_member)
+    
+    # Log activity
+    db_activity = models.Activity(
+        user_id=current_user.id,
+        group_id=db_group.id,
+        type="GROUP_CREATED",
+        description=f"{current_user.full_name} created the group '{db_group.name}'"
+    )
+    db.add(db_activity)
     db.commit()
     
     return db_group
@@ -68,6 +77,17 @@ def update_group(group_id: int, group_update: schemas.GroupUpdate, current_user:
         
     db.commit()
     db.refresh(db_group)
+
+    # Log activity
+    db_activity = models.Activity(
+        user_id=current_user.id,
+        group_id=db_group.id,
+        type="GROUP_UPDATED",
+        description=f"{current_user.full_name} updated group details"
+    )
+    db.add(db_activity)
+    db.commit()
+
     return db_group
 
 @router.post("/{group_id}/leave")
@@ -112,6 +132,15 @@ def add_member(group_id: int, email: str, current_user: models.User = Depends(au
     
     new_member = models.GroupMember(user_id=user_to_add.id, group_id=group_id)
     db.add(new_member)
+    
+    # Log activity
+    db_activity = models.Activity(
+        user_id=current_user.id,
+        group_id=group_id,
+        type="MEMBER_JOINED",
+        description=f"{current_user.full_name} added {user_to_add.full_name} to the group"
+    )
+    db.add(db_activity)
     db.commit()
     
     return user_to_add

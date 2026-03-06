@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import './Profile.css';
+import { FiUser, FiMail, FiPhone, FiDollarSign, FiLock, FiTrash2, FiCamera, FiEdit3, FiX, FiCheck } from 'react-icons/fi';
 
 const Profile = () => {
     const { user, logout } = useAuth();
@@ -118,183 +119,197 @@ const Profile = () => {
         }
     };
 
-    if (loading) {
-        return <div className="profile-loading">Loading profile...</div>;
-    }
+    if (loading) return (
+        <div className="profile-container">
+            <div className="loading-shimmer">Loading your profile...</div>
+        </div>
+    );
 
     return (
         <div className="profile-container">
             <div className="profile-header">
-                <h1>My Profile</h1>
-                <p>Manage your account settings</p>
+                <div className="header-badge">Account Settings</div>
+                <h1>Personal Profile</h1>
+                <p>Manage your account preferences and security settings.</p>
             </div>
 
             {message.text && (
-                <div className={`message ${message.type}`}>{message.text}</div>
+                <div className={`message ${message.type}`}>
+                    {message.type === 'success' ? <FiCheck /> : <FiX />}
+                    {message.text}
+                </div>
             )}
 
-            <div className="profile-content">
-                {/* Profile Picture Section */}
-                <div className="profile-card profile-picture-section">
-                    <div className="profile-picture-wrapper">
-                        {profile?.profile_picture ? (
-                            <img
-                                src={`http://127.0.0.1:8000${profile.profile_picture}`}
-                                alt="Profile"
-                                className="profile-picture"
-                            />
-                        ) : (
-                            <div className="profile-picture-placeholder">
-                                {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
-                            </div>
-                        )}
-                        <label className="upload-btn">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleProfilePictureUpload}
-                                hidden
-                            />
-                            📷 Change Photo
-                        </label>
-                    </div>
-                    <div className="profile-basic-info">
-                        <h2>{profile?.full_name}</h2>
-                        <p>{profile?.email}</p>
-                    </div>
-                </div>
-
-                {/* Profile Details Section */}
-                <div className="profile-card">
-                    <div className="card-header">
-                        <h3>Profile Details</h3>
-                        {!isEditing && (
-                            <button className="btn btn-secondary" onClick={() => setIsEditing(true)}>
-                                Edit
-                            </button>
-                        )}
-                    </div>
-
-                    {isEditing ? (
-                        <form onSubmit={handleSaveProfile} className="profile-form">
-                            <div className="form-group">
-                                <label>Full Name</label>
-                                <input
-                                    type="text"
-                                    value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    required
+            <div className="profile-grid">
+                {/* Left Column: Basic Info & Avatar */}
+                <div className="profile-sidebar">
+                    <div className="profile-card avatar-card">
+                        <div className="avatar-wrapper">
+                            {profile?.profile_picture ? (
+                                <img
+                                    src={`http://127.0.0.1:8000${profile.profile_picture}`}
+                                    alt="Profile"
+                                    className="profile-avatar-img"
                                 />
-                            </div>
-                            <div className="form-group">
-                                <label>Mobile Number</label>
+                            ) : (
+                                <div className="profile-avatar-placeholder">
+                                    {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                                </div>
+                            )}
+                            <label className="avatar-upload-label">
                                 <input
-                                    type="tel"
-                                    value={mobileNumber}
-                                    onChange={(e) => setMobileNumber(e.target.value)}
-                                    placeholder="+91 9876543210"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleProfilePictureUpload}
+                                    hidden
                                 />
-                            </div>
-                            <div className="form-group">
-                                <label>Default Currency</label>
-                                <select
-                                    value={defaultCurrency}
-                                    onChange={(e) => setDefaultCurrency(e.target.value)}
-                                >
-                                    {currencies.map(c => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-actions">
-                                <button type="submit" className="btn btn-primary">Save Changes</button>
-                                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    ) : (
-                        <div className="profile-details">
-                            <div className="detail-row">
-                                <span className="label">Full Name</span>
-                                <span className="value">{profile?.full_name}</span>
-                            </div>
-                            <div className="detail-row">
-                                <span className="label">Email</span>
-                                <span className="value">{profile?.email}</span>
-                            </div>
-                            <div className="detail-row">
-                                <span className="label">Mobile Number</span>
-                                <span className="value">{profile?.mobile_number || 'Not set'}</span>
-                            </div>
-                            <div className="detail-row">
-                                <span className="label">Default Currency</span>
-                                <span className="value">{profile?.default_currency || 'INR'}</span>
-                            </div>
+                                <FiCamera />
+                            </label>
                         </div>
-                    )}
+                        <div className="avatar-info">
+                            <h2>{profile?.full_name}</h2>
+                            <p>{profile?.email}</p>
+                        </div>
+                    </div>
+
+                    <div className="profile-card danger-card">
+                        <h3>Danger Zone</h3>
+                        <p>Once you deactivate your account, there is no going back. Please be certain.</p>
+                        <button className="btn-danger-lite" onClick={handleDeactivateAccount}>
+                            <FiTrash2 /> Deactivate Account
+                        </button>
+                    </div>
                 </div>
 
-                {/* Password Section */}
-                <div className="profile-card">
-                    <div className="card-header">
-                        <h3>Password</h3>
-                        {!showPasswordForm && (
-                            <button className="btn btn-secondary" onClick={() => setShowPasswordForm(true)}>
-                                Change Password
-                            </button>
+                {/* Right Column: Detailed Settings */}
+                <div className="profile-main">
+                    <div className="profile-card settings-card">
+                        <div className="card-header-flex">
+                            <div className="card-title">
+                                <FiUser className="title-icon" />
+                                <h3>Personal Details</h3>
+                            </div>
+                            {!isEditing && (
+                                <button className="btn-edit-text" onClick={() => setIsEditing(true)}>
+                                    <FiEdit3 /> Edit
+                                </button>
+                            )}
+                        </div>
+
+                        {isEditing ? (
+                            <form onSubmit={handleSaveProfile} className="premium-form">
+                                <div className="form-group-grid">
+                                    <div className="form-group">
+                                        <label><FiUser /> Full Name</label>
+                                        <input
+                                            type="text"
+                                            value={fullName}
+                                            onChange={(e) => setFullName(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label><FiPhone /> Mobile Number</label>
+                                        <input
+                                            type="tel"
+                                            value={mobileNumber}
+                                            onChange={(e) => setMobileNumber(e.target.value)}
+                                            placeholder="+91 9876543210"
+                                        />
+                                    </div>
+                                    <div className="form-group full-width">
+                                        <label><FiDollarSign /> Default Currency</label>
+                                        <select
+                                            value={defaultCurrency}
+                                            onChange={(e) => setDefaultCurrency(e.target.value)}
+                                        >
+                                            {currencies.map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="form-footer">
+                                    <button type="submit" className="btn-premium">Save Changes</button>
+                                    <button type="button" className="btn-ghost" onClick={() => setIsEditing(false)}>Cancel</button>
+                                </div>
+                            </form>
+                        ) : (
+                            <div className="details-info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">Full Name</span>
+                                    <span className="info-value">{profile?.full_name}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Email Address</span>
+                                    <span className="info-value">{profile?.email}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Mobile Number</span>
+                                    <span className="info-value">{profile?.mobile_number || 'Not provided'}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Default Currency</span>
+                                    <span className="info-value">{profile?.default_currency || 'INR'}</span>
+                                </div>
+                            </div>
                         )}
                     </div>
 
-                    {showPasswordForm && (
-                        <form onSubmit={handleChangePassword} className="profile-form">
-                            <div className="form-group">
-                                <label>Current Password</label>
-                                <input
-                                    type="password"
-                                    value={currentPassword}
-                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                    required
-                                />
+                    <div className="profile-card settings-card">
+                        <div className="card-header-flex">
+                            <div className="card-title">
+                                <FiLock className="title-icon" />
+                                <h3>Security</h3>
                             </div>
-                            <div className="form-group">
-                                <label>New Password</label>
-                                <input
-                                    type="password"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    required
-                                    minLength={6}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Confirm New Password</label>
-                                <input
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="form-actions">
-                                <button type="submit" className="btn btn-primary">Update Password</button>
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowPasswordForm(false)}>
-                                    Cancel
+                            {!showPasswordForm && (
+                                <button className="btn-edit-text" onClick={() => setShowPasswordForm(true)}>
+                                    Change Password
                                 </button>
-                            </div>
-                        </form>
-                    )}
-                </div>
+                            )}
+                        </div>
 
-                {/* Danger Zone */}
-                <div className="profile-card danger-zone">
-                    <div className="card-header">
-                        <h3>Danger Zone</h3>
+                        {showPasswordForm ? (
+                            <form onSubmit={handleChangePassword} className="premium-form">
+                                <div className="form-group">
+                                    <label>Current Password</label>
+                                    <input
+                                        type="password"
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group-grid">
+                                    <div className="form-group">
+                                        <label>New Password</label>
+                                        <input
+                                            type="password"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            required
+                                            minLength={6}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Confirm New Password</label>
+                                        <input
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-footer">
+                                    <button type="submit" className="btn-premium">Update Password</button>
+                                    <button type="button" className="btn-ghost" onClick={() => setShowPasswordForm(false)}>Cancel</button>
+                                </div>
+                            </form>
+                        ) : (
+                            <p className="security-text">Your password was last changed some time ago. We recommend regular updates for better security.</p>
+                        )}
                     </div>
-                    <p>Deactivating your account will log you out and prevent future logins.</p>
-                    <button className="btn btn-danger" onClick={handleDeactivateAccount}>
-                        Deactivate Account
-                    </button>
                 </div>
             </div>
         </div>

@@ -55,11 +55,23 @@ def create_expense(expense: schemas.ExpenseCreate, current_user: models.User = D
         payer_id=payer_id,
         group_id=expense.group_id,
         split_type=expense.split_type or "EQUAL",
+        category=expense.category or "General",
+        notes=expense.notes,
         date=expense_date
     )
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
+
+    # Log activity
+    db_activity = models.Activity(
+        user_id=current_user.id,
+        group_id=expense.group_id,
+        type="EXPENSE_ADDED",
+        description=f"{current_user.full_name} added '{expense.description}' (${expense.amount})"
+    )
+    db.add(db_activity)
+    # Don't commit yet, we'll commit with splits
     
     # SAFEGUARD: Check if splits already exist for this expense (in case of duplicate API calls)
     existing_splits = db.query(models.ExpenseSplit).filter(models.ExpenseSplit.expense_id == db_expense.id).all()
@@ -196,6 +208,14 @@ def get_group_balances(group_id: int, current_user: models.User = Depends(auth.g
             else:
                 # This person owes money to the payer
                 balances[split.user_id] -= split.amount
+                
+    # Include payments in balance calculation
+    payments = db.query(models.Payment).filter(models.Payment.group_id == group_id).all()
+    for payment in payments:
+        # Payer paid someone, so their balance increases (they are "more owed" or "less owing")
+        balances[payment.payer_id] += payment.amount
+        # Payee received money, so their balance decreases
+        balances[payment.payee_id] -= payment.amount
     
     # ... (previous code for calculating net balances)
     
@@ -283,3 +303,151 @@ def get_group_balances(group_id: int, current_user: models.User = Depends(auth.g
             ))
     
     return result
+
+@router.post("/settle", response_model=schemas.Payment)
+def settle_debt(payment: schemas.PaymentCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
+    # Verify group membership
+    is_member = db.query(models.GroupMember).filter(models.GroupMember.group_id == payment.group_id, models.GroupMember.user_id == current_user.id).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not authorized for this group")
+        
+    # Verify payee is in group
+    payee_is_member = db.query(models.GroupMember).filter(models.GroupMember.group_id == payment.group_id, models.GroupMember.user_id == payment.payee_id).first()
+    if not payee_is_member:
+         raise HTTPException(status_code=400, detail="Payee is not in this group")
+
+    db_payment = models.Payment(
+        payer_id=current_user.id,
+        payee_id=payment.payee_id,
+        group_id=payment.group_id,
+        amount=payment.amount,
+        notes=payment.notes,
+        date=payment.date or datetime.now()
+    )
+    db.add(db_payment)
+    db.commit()
+    db.refresh(db_payment)
+
+    # Add activity
+    payee = db.query(models.User).filter(models.User.id == payment.payee_id).first()
+    db_activity = models.Activity(
+        user_id=current_user.id,
+        group_id=payment.group_id,
+        type="PAYMENT_MADE",
+        description=f"{current_user.full_name} paid {payee.full_name if payee else 'someone'} ${payment.amount}"
+    )
+    db.add(db_activity)
+    db.commit()
+
+    return db_payment
+
+@router.get("/summary", response_model=schemas.DashboardSummary)
+def get_dashboard_summary(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
+    # Get all groups user is in
+    user_groups = db.query(models.Group).join(models.GroupMember).filter(models.GroupMember.user_id == current_user.id).all()
+    
+    total_balance = 0.0
+    owed_to_you = 0.0
+    you_owe = 0.0
+    group_summaries = []
+    
+    for group in user_groups:
+        # Calculate balance for this user in this group
+        group_balance = 0.0
+        
+        # Expenses where user is payer
+        # User is owed (Amount - User's split)
+        # We need a more efficient way or just query it
+        
+        # 1. Total paid by user in this group
+        # This is not enough, we need to know how much OTHERS owe for those expenses
+        
+        # Let's use the logic from get_group_balances but just for this user
+        group_user_balance = 0.0
+        
+        # Expenses where user participated (either as payer or splitter)
+        # All expenses in group
+        all_expenses = db.query(models.Expense).filter(models.Expense.group_id == group.id).all()
+        for exp in all_expenses:
+            splits = db.query(models.ExpenseSplit).filter(models.ExpenseSplit.expense_id == exp.id).all()
+            for split in splits:
+                if split.user_id == current_user.id:
+                    if exp.payer_id == current_user.id:
+                        # User paid, so they are owed (Total - their share)
+                        group_user_balance += (exp.amount - split.amount)
+                    else:
+                        # Someone else paid, user owes their share
+                        group_user_balance -= split.amount
+                elif exp.payer_id == current_user.id:
+                    # User paid, but is NOT in this specific split? (Edge case)
+                    # Actually if they are not in the split, someone else owes them the split amount
+                    # BUT our logic above 'Total - their share' covers it if we only look at splits where user IS present.
+                    # Wait, if user is payer but NOT in splits, they are owed the WHOLE split amount.
+                    pass 
+            
+            # If user is payer but not in ANY split (unlikely):
+            user_in_splits = any(s.user_id == current_user.id for s in splits)
+            if exp.payer_id == current_user.id and not user_in_splits:
+                 group_user_balance += exp.amount
+
+        # 2. Payments
+        # Payments made by user (+)
+        payments_made = db.query(models.Payment).filter(models.Payment.group_id == group.id, models.Payment.payer_id == current_user.id).all()
+        for p in payments_made:
+            group_user_balance += p.amount
+            
+        # Payments received by user (-)
+        payments_received = db.query(models.Payment).filter(models.Payment.group_id == group.id, models.Payment.payee_id == current_user.id).all()
+        for p in payments_received:
+            group_user_balance -= p.amount
+            
+        total_balance += group_user_balance
+        if group_user_balance > 0.01:
+            owed_to_you += group_user_balance
+        elif group_user_balance < -0.01:
+            you_owe += abs(group_user_balance)
+            
+        group_summaries.append(schemas.GroupSummary(
+            group_id=group.id,
+            group_name=group.name,
+            balance=group_user_balance
+        ))
+        
+    return schemas.DashboardSummary(
+        total_balance=total_balance,
+        owed_to_you=owed_to_you,
+        you_owe=you_owe,
+        group_summaries=group_summaries
+    )
+
+@router.get("/activities", response_model=List[schemas.Activity])
+def get_activities(group_id: int = None, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
+    query = db.query(models.Activity, models.User.full_name, models.Group.name).join(models.User, models.Activity.user_id == models.User.id).join(models.Group, models.Activity.group_id == models.Group.id)
+    
+    if group_id:
+        # Check membership
+        is_member = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id, models.GroupMember.user_id == current_user.id).first()
+        if not is_member:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        query = query.filter(models.Activity.group_id == group_id)
+    else:
+        # Global activities for groups user belongs to
+        user_group_ids = db.query(models.GroupMember.group_id).filter(models.GroupMember.user_id == current_user.id).all()
+        id_list = [g[0] for g in user_group_ids]
+        query = query.filter(models.Activity.group_id.in_(id_list))
+        
+    results = query.order_by(models.Activity.created_at.desc()).limit(50).all()
+    
+    activities = []
+    for activity, user_name, group_name in results:
+        activities.append(schemas.Activity(
+            id=activity.id,
+            user_id=activity.user_id,
+            user_name=user_name,
+            group_id=activity.group_id,
+            group_name=group_name,
+            type=activity.type,
+            description=activity.description,
+            created_at=activity.created_at
+        ))
+    return activities
