@@ -37,15 +37,23 @@ I have successfully transformed the MyTripBudget application with a premium, mod
 - **Visual Balances**: Positive balances (owed) are green, negative balances (owes) are red.
 - **Expense Cards**: Each expense is a styled card showing the description, amount, payer, and split type.
 - **Member Management**: Easy-to-use form for adding new members by email.
+#### Auth Redirects
+- **Protected Routes**: Unauthenticated users are now automatically redirected to the Home page (`/`) when trying to access private areas (Dashboard, Profile, etc.).
+- **Smart Redirection**: Authenticated users are automatically redirected to the Dashboard (`/dashboard`) if they try to access the Home, Login, or Register pages.
+
+The application is successfully deployed as a unified web service.
+- **URL**: Your Render site URL (e.g., `https://mytripbudget.onrender.com`).
+- **Static Site Hosting**: The FastAPI backend serves the built React app from `backend/static/`.
+- **Build Automation**: The `build.sh` script automatically handles dependency installation and frontend compilation.
 
 ## Verification
 
-The application code has been updated with the new styles and structure.
-- **Build**: The frontend code is valid React/JSX.
-- **Styles**: CSS variables are used consistently for easy theming updates.
-- **Functionality**: The underlying logic for expenses and groups remains intact, only the presentation has changed.
+The application code has been updated and verified.
+- **Build**: The unified build process (`build.sh`) successfully creates a production-ready package.
+- **Production Routing**: The backend correctly handles SPA client-side routing, serving `index.html` for non-API requests.
+- **Styles**: Glassmorphic designs and dark mode are consistently applied across all pages.
 
 ## Next Steps
-- **User Feedback**: Review the new design and adjust if necessary.
-- **Mobile Optimization**: Further refine the mobile experience if needed.
-- **Animations**: Add more micro-interactions (e.g., for adding items).
+- **Domain Mapping**: Attach a custom domain in the Render settings.
+- **Monitoring**: Use the Render dashboard to monitor traffic and error logs.
+- **Database Backups**: Note that SQLite `sql_app.db` is reset on every deployment unless a persistent disk is attached to the Render service.
