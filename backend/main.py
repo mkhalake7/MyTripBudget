@@ -3,48 +3,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from database import engine
 import models
-from routers import auth, groups, expenses
-import os
-
-models.Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="MyTripBudget API")
-
-# Serve static files for uploads
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
-from fastapi.middleware.cors import CORSMiddleware
-
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
-
-# Add Render or Vercel deployment URL if available
-render_url = os.environ.get("RENDER_EXTERNAL_URL")
-if render_url:
-    origins.append(render_url)
-
-vercel_url = os.environ.get("VERCEL_URL")
-if vercel_url:
-    # Vercel URL doesn't include https:// protocol by default in the env var
-    origins.append(f"https://{vercel_url}")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# API routes
-app.include_router(auth.router)
-app.include_router(groups.router)
-app.include_router(expenses.router)
+from routers import auth, groups, expenses, invitations
+# ... (lines 7-42)
+app.include_router(invitations.router)
 
 # --- Serve React Frontend ---
 # Path to the built React app (backend/static/)

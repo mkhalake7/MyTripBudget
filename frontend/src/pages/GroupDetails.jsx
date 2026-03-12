@@ -26,6 +26,8 @@ const GroupDetails = () => {
     const [customSplits, setCustomSplits] = useState([]);
 
     const [newMemberEmail, setNewMemberEmail] = useState('');
+    const [newMemberName, setNewMemberName] = useState('');
+    const [isInviting, setIsInviting] = useState(false);
     const [message, setMessage] = useState('');
     const [desc, setDesc] = useState('');
     const [amount, setAmount] = useState('');
@@ -225,15 +227,22 @@ const GroupDetails = () => {
 
     const addMember = async (e) => {
         e.preventDefault();
+        setIsInviting(true);
         try {
-            await api.post(`/groups/${groupId}/members?email=${newMemberEmail}`);
+            await api.post('/invitations/', {
+                email: newMemberEmail,
+                name: newMemberName,
+                group_id: parseInt(groupId)
+            });
             setNewMemberEmail('');
-            fetchMembers();
-            setMessage('Member added successfully!');
+            setNewMemberName('');
+            setMessage('Invitation sent successfully!');
             setTimeout(() => setMessage(''), 3000);
         } catch (error) {
-            console.error("Error adding member", error);
-            setMessage('Failed to add member. User might not exist or is already in group.');
+            console.error("Error sending invitation", error);
+            setMessage(error.response?.data?.detail || 'Failed to send invitation.');
+        } finally {
+            setIsInviting(false);
         }
     };
 
@@ -372,16 +381,28 @@ const GroupDetails = () => {
                             <h3>Members</h3>
                         </div>
 
-                        <div className="add-member-inline-premium">
+                        <div className="invite-member-premium">
                             <form onSubmit={addMember}>
-                                <input
-                                    type="email"
-                                    placeholder="Add by email..."
-                                    value={newMemberEmail}
-                                    onChange={(e) => setNewMemberEmail(e.target.value)}
-                                    required
-                                />
-                                <button type="submit"><FiPlus /></button>
+                                <div className="invite-fields">
+                                    <input
+                                        type="text"
+                                        placeholder="Name (Optional)"
+                                        value={newMemberName}
+                                        onChange={(e) => setNewMemberName(e.target.value)}
+                                        className="invite-name-input"
+                                    />
+                                    <input
+                                        type="email"
+                                        placeholder="Email address..."
+                                        value={newMemberEmail}
+                                        onChange={(e) => setNewMemberEmail(e.target.value)}
+                                        required
+                                        className="invite-email-input"
+                                    />
+                                </div>
+                                <button type="submit" disabled={isInviting}>
+                                    {isInviting ? '...' : <FiPlus />}
+                                </button>
                             </form>
                         </div>
 

@@ -7,6 +7,7 @@ import GroupDetails from './pages/GroupDetails';
 import RecentActivity from './pages/RecentActivity';
 import Profile from './pages/Profile';
 import Home from './pages/Home';
+import JoinGroup from './pages/JoinGroup';
 import './App.css';
 
 import Layout from './components/Layout';
@@ -32,6 +33,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/join/:token" element={<JoinGroup />} />
       </Route>
 
       <Route element={<PrivateRoute />}>

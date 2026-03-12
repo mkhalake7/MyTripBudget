@@ -8,3 +8,4 @@ python-multipart
 a2wsgi
 bcrypt
 psycopg2-binary
+resend

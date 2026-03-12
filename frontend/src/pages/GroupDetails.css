@@ -224,49 +224,67 @@
     color: #f1f5f9;
 }
 
-/* --- Members List --- */
-.add-member-inline-premium {
-    margin-bottom: 20px;
+/* --- Invite Member Section --- */
+.invite-member-premium {
+    margin-bottom: 24px;
+    background: rgba(15, 23, 42, 0.4);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-.add-member-inline-premium form {
+.invite-member-premium form {
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.add-member-inline-premium input {
-    flex: 1;
-    background: rgba(15, 23, 42, 0.5);
+.invite-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.invite-member-premium input {
+    background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: #fff;
-    padding: 10px 14px;
+    padding: 12px 14px;
     border-radius: 10px;
     outline: none;
+    font-size: 0.9rem;
     transition: all 0.2s ease;
 }
 
-.add-member-inline-premium input:focus {
+.invite-member-premium input:focus {
     border-color: #3b82f6;
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(15, 23, 42, 0.9);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
-.add-member-inline-premium button {
-    background: #3b82f6;
+.invite-member-premium button {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border: none;
-    width: 40px;
-    height: 40px;
+    padding: 12px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    font-weight: 600;
     transition: all 0.2s ease;
 }
 
-.add-member-inline-premium button:hover {
-    transform: scale(1.05);
-    background: #2563eb;
+.invite-member-premium button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.invite-member-premium button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .members-scroll-area {

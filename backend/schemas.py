@@ -154,3 +154,26 @@ class BalanceSummary(BaseModel):
     user_name: str
     balance: float  # Positive means they are owed, negative means they owe
     debts: List[Debt] = []  # List of specific debts (either owed by or owed to this user)
+
+class InvitationBase(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    group_id: int
+
+class InvitationCreate(InvitationBase):
+    pass
+
+class Invitation(InvitationBase):
+    id: int
+    inviter_id: int
+    token: str
+    status: str
+    created_at: datetime
+    expires_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class InvitationClaim(BaseModel):
+    full_name: str
+    password: str
