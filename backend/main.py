@@ -23,10 +23,15 @@ origins = [
     "http://127.0.0.1:8000",
 ]
 
-# Add Render deployment URL if available
+# Add Render or Vercel deployment URL if available
 render_url = os.environ.get("RENDER_EXTERNAL_URL")
 if render_url:
     origins.append(render_url)
+
+vercel_url = os.environ.get("VERCEL_URL")
+if vercel_url:
+    # Vercel URL doesn't include https:// protocol by default in the env var
+    origins.append(f"https://{vercel_url}")
 
 app.add_middleware(
     CORSMiddleware,
