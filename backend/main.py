@@ -10,9 +10,13 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="MyTripBudget API")
 
-# Serve static files for uploads
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Serve static files for uploads (skip on Vercel due to read-only filesystem)
+if not os.environ.get("VERCEL"):
+    try:
+        os.makedirs("uploads", exist_ok=True)
+        app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+    except OSError:
+        print("Warning: Could not create uploads directory (read-only filesystem)")
 
 from fastapi.middleware.cors import CORSMiddleware
 

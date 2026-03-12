@@ -11,7 +11,11 @@ router = APIRouter(
 )
 
 UPLOAD_DIR = "uploads/profile_pictures"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+if not os.environ.get("VERCEL"):
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+    except OSError:
+        print("Warning: Could not create upload directory")
 
 @router.post("/signup", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
