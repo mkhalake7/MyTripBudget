@@ -46,10 +46,10 @@ app.add_middleware(
 )
 
 # API routes
-app.include_router(auth.router)
-app.include_router(groups.router)
-app.include_router(expenses.router)
-app.include_router(invitations.router)
+app.include_router(auth.router, prefix="/api")
+app.include_router(groups.router, prefix="/api")
+app.include_router(expenses.router, prefix="/api")
+app.include_router(invitations.router, prefix="/api")
 
 # --- Serve React Frontend ---
 # Path to the built React app (backend/static/)
