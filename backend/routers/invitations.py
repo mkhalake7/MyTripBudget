@@ -4,9 +4,9 @@ from typing import List
 import uuid
 from datetime import datetime, timedelta
 
-from database import get_db
-import models, schemas, auth
-from services.email import send_invitation_email
+from ..database import get_db
+from .. import models, schemas, auth
+from ..services.email import send_invitation_email
 
 router = APIRouter(prefix="/invitations", tags=["invitations"])
 

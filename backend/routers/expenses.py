@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from collections import defaultdict
 from datetime import datetime
-import models, schemas, auth, database
+from .. import models, schemas, auth, database
 
 router = APIRouter(
     prefix="/expenses",
