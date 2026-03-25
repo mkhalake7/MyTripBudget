@@ -24,7 +24,7 @@
     },
     {
       "source": "/:path*",
-      "destination": "/"
+      "destination": "/frontend/:path*"
     }
   ]
 }
